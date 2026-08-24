@@ -2,19 +2,21 @@ import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import FoundItemsPage from './FoundItemsPage';
+import LostReportsPage from './LostReportsPage';
 
 export default function AuthPage() {
   const { session, userProfile, refreshProfile } = useAuth();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
-  const [mode, setMode] = useState('join'); // 'join' or 'create'
-  
+  const [mode, setMode] = useState('join');
+  const [activeTab, setActiveTab] = useState('found');
+
   const [schoolName, setSchoolName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [studentName, setStudentName] = useState('');
-  
+
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
 
@@ -28,7 +30,7 @@ export default function AuthPage() {
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) setErrorMsg(error.message);
-      else setInfoMsg('Account created! Check your email or log in.');
+      else setInfoMsg('Account created! Check your inbox or log in.');
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setErrorMsg(error.message);
@@ -53,11 +55,8 @@ export default function AuthPage() {
     });
 
     const data = await res.json();
-    if (!res.ok) {
-      setErrorMsg(data.detail || 'Failed to create school workspace.');
-    } else {
-      refreshProfile();
-    }
+    if (!res.ok) setErrorMsg(data.detail || 'Failed to create workspace.');
+    else refreshProfile();
   };
 
   const handleJoinSchool = async (e) => {
@@ -74,152 +73,172 @@ export default function AuthPage() {
     });
 
     const data = await res.json();
-    if (!res.ok) {
-      setErrorMsg(data.detail || 'Failed to join school workspace.');
-    } else {
-      refreshProfile();
-    }
+    if (!res.ok) setErrorMsg(data.detail || 'Failed to join workspace.');
+    else refreshProfile();
   };
 
   if (!session) {
     return (
-      <div style={{ maxWidth: '400px', margin: '50px auto', fontFamily: 'sans-serif' }}>
-        <h2>{isSignUp ? 'Create Account' : 'Student / Admin Login'}</h2>
-        {errorMsg && <p style={{ color: 'red' }}>{errorMsg}</p>}
-        {infoMsg && <p style={{ color: 'green' }}>{infoMsg}</p>}
+      <div className="auth-wrapper">
+        <div className="auth-card">
+          <h2>{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
+          <p className="subtitle">School Lost & Found Management Platform</p>
 
-        <form onSubmit={handleAuth}>
-          <div style={{ marginBottom: '10px' }}>
-            <label>Email: </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ width: '100%', padding: '8px' }}
-            />
-          </div>
-          <div style={{ marginBottom: '10px' }}>
-            <label>Password: </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{ width: '100%', padding: '8px' }}
-            />
-          </div>
-          <button type="submit" style={{ padding: '10px 15px', width: '100%', cursor: 'pointer' }}>
-            {isSignUp ? 'Sign Up' : 'Log In'}
+          {errorMsg && <div className="alert-error">{errorMsg}</div>}
+          {infoMsg && <div className="alert-success">{infoMsg}</div>}
+
+          <form onSubmit={handleAuth}>
+            <div className="form-group">
+              <label>Email Address</label>
+              <input
+                type="email"
+                className="form-control"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Password</label>
+              <input
+                type="password"
+                className="form-control"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: '8px' }}>
+              {isSignUp ? 'Sign Up' : 'Log In'}
+            </button>
+          </form>
+
+          <button
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="btn btn-outline btn-full"
+            style={{ marginTop: '12px' }}
+          >
+            {isSignUp ? 'Already have an account? Log In' : "Don't have an account? Sign Up"}
           </button>
-        </form>
-
-        <button
-          onClick={() => setIsSignUp(!isSignUp)}
-          style={{ marginTop: '15px', background: 'none', border: 'none', color: 'blue', cursor: 'pointer' }}
-        >
-          {isSignUp ? 'Already have an account? Log In' : "Don't have an account? Sign Up"}
-        </button>
+        </div>
       </div>
     );
   }
 
   if (session && !userProfile) {
     return (
-      <div style={{ maxWidth: '450px', margin: '50px auto', fontFamily: 'sans-serif' }}>
-        <h2>Complete Your School Setup</h2>
-        <p>Logged in as: <strong>{session.user.email}</strong></p>
-        
-        {errorMsg && <p style={{ color: 'red' }}>{errorMsg}</p>}
+      <div className="auth-wrapper">
+        <div className="auth-card" style={{ maxWidth: '480px' }}>
+          <h2>Workspace Setup</h2>
+          <p className="subtitle">Logged in as {session.user.email}</p>
 
-        <div style={{ marginBottom: '20px' }}>
-          <button
-            onClick={() => setMode('join')}
-            style={{ fontWeight: mode === 'join' ? 'bold' : 'normal', marginRight: '10px' }}
-          >
-            Join Existing School
-          </button>
-          <button
-            onClick={() => setMode('create')}
-            style={{ fontWeight: mode === 'create' ? 'bold' : 'normal' }}
-          >
-            Create New School (Admin)
+          {errorMsg && <div className="alert-error">{errorMsg}</div>}
+
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+            <button
+              onClick={() => setMode('join')}
+              className={`btn btn-full ${mode === 'join' ? 'btn-primary' : 'btn-outline'}`}
+            >
+              Join School
+            </button>
+            <button
+              onClick={() => setMode('create')}
+              className={`btn btn-full ${mode === 'create' ? 'btn-primary' : 'btn-outline'}`}
+            >
+              Create School
+            </button>
+          </div>
+
+          {mode === 'join' ? (
+            <form onSubmit={handleJoinSchool}>
+              <div className="form-group">
+                <label>Your Full Name</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={studentName}
+                  onChange={(e) => setStudentName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>School Join Code</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value)}
+                  required
+                />
+              </div>
+              <button type="submit" className="btn btn-primary btn-full">
+                Join Workspace
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleCreateSchool}>
+              <div className="form-group">
+                <label>School Name</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={schoolName}
+                  onChange={(e) => setSchoolName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Assign Unique Join Code</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value)}
+                  required
+                />
+              </div>
+              <button type="submit" className="btn btn-primary btn-full">
+                Create Workspace
+              </button>
+            </form>
+          )}
+
+          <button onClick={handleLogout} className="btn btn-outline btn-full" style={{ marginTop: '12px' }}>
+            Sign Out
           </button>
         </div>
-
-        {mode === 'join' ? (
-          <form onSubmit={handleJoinSchool}>
-            <div style={{ marginBottom: '10px' }}>
-              <label>Your Name: </label>
-              <input
-                type="text"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-                required
-                style={{ width: '100%', padding: '8px' }}
-              />
-            </div>
-            <div style={{ marginBottom: '10px' }}>
-              <label>School Join Code: </label>
-              <input
-                type="text"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value)}
-                required
-                style={{ width: '100%', padding: '8px' }}
-              />
-            </div>
-            <button type="submit" style={{ padding: '10px', width: '100%' }}>Join Workspace</button>
-          </form>
-        ) : (
-          <form onSubmit={handleCreateSchool}>
-            <div style={{ marginBottom: '10px' }}>
-              <label>School Name: </label>
-              <input
-                type="text"
-                value={schoolName}
-                onChange={(e) => setSchoolName(e.target.value)}
-                required
-                style={{ width: '100%', padding: '8px' }}
-              />
-            </div>
-            <div style={{ marginBottom: '10px' }}>
-              <label>Set Unique Join Code: </label>
-              <input
-                type="text"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value)}
-                required
-                style={{ width: '100%', padding: '8px' }}
-              />
-            </div>
-            <button type="submit" style={{ padding: '10px', width: '100%' }}>Create Workspace</button>
-          </form>
-        )}
-
-        <button onClick={handleLogout} style={{ marginTop: '20px', color: 'gray' }}>
-          Sign Out
-        </button>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '900px', margin: '20px auto', fontFamily: 'sans-serif' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #ccc', paddingBottom: '10px', marginBottom: '20px' }}>
+    <div className="app-container">
+      <header className="navbar">
         <div>
-          <h1 style={{ margin: 0 }}>School Workspace</h1>
-          <p style={{ margin: 0, color: '#666' }}>Logged in as: <strong>{userProfile.name}</strong> ({userProfile.role})</p>
+          <h1>School Workspace</h1>
+          <p>Logged in as <strong>{userProfile.name}</strong> ({userProfile.role})</p>
         </div>
-        <button
-          onClick={handleLogout}
-          style={{ padding: '8px 16px', background: '#e53e3e', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-        >
+        <button onClick={handleLogout} className="btn btn-danger">
           Sign Out
         </button>
       </header>
 
-      <FoundItemsPage />
+      <nav className="tabs-nav">
+        <button
+          onClick={() => setActiveTab('found')}
+          className={`tab-btn ${activeTab === 'found' ? 'active' : ''}`}
+        >
+          Found Items
+        </button>
+        <button
+          onClick={() => setActiveTab('lost')}
+          className={`tab-btn ${activeTab === 'lost' ? 'active' : ''}`}
+        >
+          Lost Reports
+        </button>
+      </nav>
+
+      {activeTab === 'found' ? <FoundItemsPage /> : <LostReportsPage />}
     </div>
   );
 }

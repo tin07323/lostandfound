@@ -55,9 +55,11 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const refreshProfile = () => {
-    if (session) {
-      fetchProfile(session.access_token);
+  const refreshProfile = async () => {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session) {
+      setSession(data.session);
+      await fetchProfile(data.session.access_token);
     }
   };
 
@@ -68,4 +70,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);   
+export const useAuth = () => useContext(AuthContext);
