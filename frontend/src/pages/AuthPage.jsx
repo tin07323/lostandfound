@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import FoundItemsPage from './FoundItemsPage';
 
 export default function AuthPage() {
   const { session, userProfile, refreshProfile } = useAuth();
@@ -204,21 +205,21 @@ export default function AuthPage() {
   }
 
   return (
-    <div style={{ maxWidth: '500px', margin: '50px auto', fontFamily: 'sans-serif' }}>
-      <h2>School Workspace Dashboard</h2>
-      <div style={{ padding: '15px', border: '1px solid #ddd', borderRadius: '5px' }}>
-        <p><strong>Name:</strong> {userProfile.name}</p>
-        <p><strong>Email:</strong> {userProfile.email}</p>
-        <p><strong>Role:</strong> {userProfile.role}</p>
-        <p><strong>School Workspace ID:</strong> {userProfile.school_id}</p>
-      </div>
+    <div style={{ maxWidth: '900px', margin: '20px auto', fontFamily: 'sans-serif' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #ccc', paddingBottom: '10px', marginBottom: '20px' }}>
+        <div>
+          <h1 style={{ margin: 0 }}>School Workspace</h1>
+          <p style={{ margin: 0, color: '#666' }}>Logged in as: <strong>{userProfile.name}</strong> ({userProfile.role})</p>
+        </div>
+        <button
+          onClick={handleLogout}
+          style={{ padding: '8px 16px', background: '#e53e3e', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        >
+          Sign Out
+        </button>
+      </header>
 
-      <button
-        onClick={handleLogout}
-        style={{ marginTop: '20px', padding: '8px 16px', background: '#e53e3e', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-      >
-        Sign Out
-      </button>
+      <FoundItemsPage />
     </div>
   );
 }

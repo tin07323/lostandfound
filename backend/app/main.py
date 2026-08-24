@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.database import get_db, engine, Base
 import app.models
-from app.routes import auth
+from app.routes import auth, found_items
 
 try:
     Base.metadata.create_all(bind=engine)
@@ -23,6 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(found_items.router)
 
 @app.get("/")
 def read_root():
