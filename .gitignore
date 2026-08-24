@@ -1,0 +1,21 @@
+# Environment & Secret Files
+.env
+.env*.local
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Node & Frontend Build
+node_modules/
+dist/
+.vite/
+
+# IDE & Operating System
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
