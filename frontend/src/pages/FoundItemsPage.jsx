@@ -6,10 +6,17 @@ export default function FoundItemsPage() {
   const { session, userProfile } = useAuth();
   const [items, setItems] = useState([]);
   const [showForm, setShowForm] = useState(false);
+
+  // Claiming modal state
   const [claimingItem, setClaimingItem] = useState(null);
   const [proofText, setProofText] = useState('');
   const [claimSuccess, setClaimSuccess] = useState('');
 
+  // Review claims modal state
+  const [reviewItem, setReviewItem] = useState(null);
+  const [claimsList, setClaimsList] = useState([]);
+
+  // Form state
   const [itemName, setItemName] = useState('');
   const [category, setCategory] = useState('Electronics');
   const [color, setColor] = useState('');
@@ -125,6 +132,44 @@ export default function FoundItemsPage() {
     }
   };
 
+  const openReviewModal = async (item) => {
+    setReviewItem(item);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/claims/item/${item.id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.ok) {
+        const claimsData = await res.json();
+        setClaimsList(claimsData);
+      }
+    } catch (err) {
+      console.error('Error fetching claims:', err);
+    }
+  };
+
+  const handleApproveClaim = async (claimId) => {
+    const res = await fetch(`${API_BASE_URL}/api/claims/${claimId}/approve`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (res.ok) {
+      alert('Claim approved! Item status updated to claimed.');
+      setReviewItem(null);
+      fetchItems();
+    }
+  };
+
+  const handleRejectClaim = async (claimId) => {
+    const res = await fetch(`${API_BASE_URL}/api/claims/${claimId}/reject`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (res.ok) {
+      alert('Claim rejected.');
+      openReviewModal(reviewItem);
+    }
+  };
+
   const handleDelete = async (itemId) => {
     if (!window.confirm('Delete this found item?')) return;
     const res = await fetch(`${API_BASE_URL}/api/found-items/${itemId}`, {
@@ -209,7 +254,7 @@ export default function FoundItemsPage() {
         <div className="panel-card" style={{ border: '2px solid #4f46e5' }}>
           <h3 style={{ marginBottom: '8px' }}>Claim Item: {claimingItem.item_name}</h3>
           <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '16px' }}>
-            Provide distinctive details (e.g., serial number, phone lock screen wallpaper, specific marks) to prove ownership.
+            Provide distinctive details (e.g., serial number, unique wallpapers or marks) to prove ownership.
           </p>
           
           {claimSuccess && <div className="alert-success">{claimSuccess}</div>}
@@ -224,6 +269,42 @@ export default function FoundItemsPage() {
               <button type="button" onClick={() => setClaimingItem(null)} className="btn btn-outline">Cancel</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {reviewItem && (
+        <div className="panel-card" style={{ border: '2px solid #059669' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3>Claims for: {reviewItem.item_name}</h3>
+            <button onClick={() => setReviewItem(null)} className="btn btn-outline" style={{ padding: '4px 8px' }}>Close</button>
+          </div>
+
+          {claimsList.length === 0 ? (
+            <p style={{ color: '#64748b' }}>No pending claims submitted for this item yet.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {claimsList.map((c) => (
+                <div key={c.id} style={{ border: '1px solid #e2e8f0', padding: '12px', borderRadius: '8px', backgroundColor: '#f8fafc' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>Submitted Proof</span>
+                    <span className="badge">{c.status.toUpperCase()}</span>
+                  </div>
+                  <p style={{ fontSize: '0.9rem', marginBottom: '12px' }}>"{c.proof_description}"</p>
+                  
+                  {c.status === 'pending' && (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => handleApproveClaim(c.id)} className="btn btn-primary" style={{ padding: '4px 12px', fontSize: '0.8rem', backgroundColor: '#059669' }}>
+                        Approve Claim
+                      </button>
+                      <button onClick={() => handleRejectClaim(c.id)} className="btn btn-danger" style={{ padding: '4px 12px', fontSize: '0.8rem' }}>
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -251,7 +332,7 @@ export default function FoundItemsPage() {
                 <p className="item-meta">📍 Found at: {item.location_found}</p>
                 <p className="item-desc">{item.description}</p>
 
-                <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
                   {item.status === 'unclaimed' && item.posted_by !== userProfile?.id && (
                     <button onClick={() => setClaimingItem(item)} className="btn btn-primary btn-full" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
                       Claim This
@@ -259,9 +340,14 @@ export default function FoundItemsPage() {
                   )}
 
                   {(item.posted_by === userProfile?.id || userProfile?.role === 'admin') && (
-                    <button onClick={() => handleDelete(item.id)} className="btn btn-danger btn-full" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
-                      Remove
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button onClick={() => openReviewModal(item)} className="btn btn-outline btn-full" style={{ padding: '6px 10px', fontSize: '0.8rem' }}>
+                        Review Claims
+                      </button>
+                      <button onClick={() => handleDelete(item.id)} className="btn btn-danger" style={{ padding: '6px 10px', fontSize: '0.8rem' }}>
+                        Delete
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
