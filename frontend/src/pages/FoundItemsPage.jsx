@@ -6,6 +6,9 @@ export default function FoundItemsPage() {
   const { session, userProfile } = useAuth();
   const [items, setItems] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [claimingItem, setClaimingItem] = useState(null);
+  const [proofText, setProofText] = useState('');
+  const [claimSuccess, setClaimSuccess] = useState('');
 
   const [itemName, setItemName] = useState('');
   const [category, setCategory] = useState('Electronics');
@@ -96,6 +99,32 @@ export default function FoundItemsPage() {
     setLoading(false);
   };
 
+  const handleClaimSubmit = async (e) => {
+    e.preventDefault();
+    setClaimSuccess('');
+
+    const res = await fetch(`${API_BASE_URL}/api/claims/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        item_id: claimingItem.id,
+        proof_description: proofText,
+      }),
+    });
+
+    if (res.ok) {
+      setClaimSuccess('Claim submitted successfully! The poster will review your proof.');
+      setProofText('');
+      setTimeout(() => {
+        setClaimingItem(null);
+        setClaimSuccess('');
+      }, 2000);
+    }
+  };
+
   const handleDelete = async (itemId) => {
     if (!window.confirm('Delete this found item?')) return;
     const res = await fetch(`${API_BASE_URL}/api/found-items/${itemId}`, {
@@ -123,13 +152,7 @@ export default function FoundItemsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="form-group">
                 <label>Item Name</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={itemName}
-                  onChange={(e) => setItemName(e.target.value)}
-                  required
-                />
+                <input type="text" className="form-control" value={itemName} onChange={(e) => setItemName(e.target.value)} required />
               </div>
 
               <div className="form-group">
@@ -156,36 +179,18 @@ export default function FoundItemsPage() {
 
               <div className="form-group">
                 <label>Location Found</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={locationFound}
-                  onChange={(e) => setLocationFound(e.target.value)}
-                  required
-                />
+                <input type="text" className="form-control" value={locationFound} onChange={(e) => setLocationFound(e.target.value)} required />
               </div>
 
               <div className="form-group">
                 <label>Date & Time Found</label>
-                <input
-                  type="datetime-local"
-                  className="form-control"
-                  value={dateFound}
-                  onChange={(e) => setDateFound(e.target.value)}
-                  required
-                />
+                <input type="datetime-local" className="form-control" value={dateFound} onChange={(e) => setDateFound(e.target.value)} required />
               </div>
             </div>
 
             <div className="form-group">
               <label>Description / Details</label>
-              <textarea
-                className="form-control"
-                style={{ minHeight: '80px' }}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                required
-              />
+              <textarea className="form-control" style={{ minHeight: '80px' }} value={description} onChange={(e) => setDescription(e.target.value)} required />
             </div>
 
             <div className="form-group">
@@ -196,6 +201,28 @@ export default function FoundItemsPage() {
             <button type="submit" disabled={loading} className="btn btn-primary" style={{ marginTop: '8px' }}>
               {loading ? 'Submitting...' : 'Post Found Item'}
             </button>
+          </form>
+        </div>
+      )}
+
+      {claimingItem && (
+        <div className="panel-card" style={{ border: '2px solid #4f46e5' }}>
+          <h3 style={{ marginBottom: '8px' }}>Claim Item: {claimingItem.item_name}</h3>
+          <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '16px' }}>
+            Provide distinctive details (e.g., serial number, phone lock screen wallpaper, specific marks) to prove ownership.
+          </p>
+          
+          {claimSuccess && <div className="alert-success">{claimSuccess}</div>}
+
+          <form onSubmit={handleClaimSubmit}>
+            <div className="form-group">
+              <label>Proof of Ownership</label>
+              <textarea className="form-control" style={{ minHeight: '80px' }} value={proofText} onChange={(e) => setProofText(e.target.value)} required />
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="submit" className="btn btn-primary">Submit Claim</button>
+              <button type="button" onClick={() => setClaimingItem(null)} className="btn btn-outline">Cancel</button>
+            </div>
           </form>
         </div>
       )}
@@ -214,16 +241,29 @@ export default function FoundItemsPage() {
                 <div className="item-card-placeholder">No Photo Available</div>
               )}
               <div className="item-card-body">
-                <span className="badge">{item.category}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="badge">{item.category}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: item.status === 'claimed' ? '#166534' : '#d97706' }}>
+                    {item.status.toUpperCase()}
+                  </span>
+                </div>
                 <h4 className="item-title">{item.item_name}</h4>
                 <p className="item-meta">📍 Found at: {item.location_found}</p>
                 <p className="item-desc">{item.description}</p>
 
-                {(item.posted_by === userProfile?.id || userProfile?.role === 'admin') && (
-                  <button onClick={() => handleDelete(item.id)} className="btn btn-danger btn-full" style={{ marginTop: 'auto', padding: '6px 12px', fontSize: '0.8rem' }}>
-                    Remove Post
-                  </button>
-                )}
+                <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                  {item.status === 'unclaimed' && item.posted_by !== userProfile?.id && (
+                    <button onClick={() => setClaimingItem(item)} className="btn btn-primary btn-full" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
+                      Claim This
+                    </button>
+                  )}
+
+                  {(item.posted_by === userProfile?.id || userProfile?.role === 'admin') && (
+                    <button onClick={() => handleDelete(item.id)} className="btn btn-danger btn-full" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
+                      Remove
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
