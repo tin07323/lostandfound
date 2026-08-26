@@ -324,8 +324,8 @@ export default function FoundItemsPage() {
               <div className="item-card-body">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span className="badge">{item.category}</span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: item.status === 'claimed' ? '#166534' : '#d97706' }}>
-                    {item.status.toUpperCase()}
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: item.status?.toLowerCase() === 'claimed' ? '#166534' : '#d97706' }}>
+                    {item.status?.toUpperCase()}
                   </span>
                 </div>
                 <h4 className="item-title">{item.item_name}</h4>
@@ -333,18 +333,30 @@ export default function FoundItemsPage() {
                 <p className="item-desc">{item.description}</p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
-                  {item.status === 'unclaimed' && item.posted_by !== userProfile?.id && (
-                    <button onClick={() => setClaimingItem(item)} className="btn btn-primary btn-full" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
-                      Claim This
+                  {item.status?.toLowerCase() === 'unclaimed' && String(item.posted_by) !== String(userProfile?.id) && (
+                    <button 
+                      onClick={() => setClaimingItem(item)} 
+                      className="btn btn-primary btn-full" 
+                      style={{ padding: '6px 12px', fontSize: '0.8rem', cursor: 'pointer' }}
+                    >
+                      🖐 Claim This Item
                     </button>
                   )}
 
-                  {(item.posted_by === userProfile?.id || userProfile?.role === 'admin') && (
+                  {(String(item.posted_by) === String(userProfile?.id) || userProfile?.role === 'admin') && (
                     <div style={{ display: 'flex', gap: '6px' }}>
-                      <button onClick={() => openReviewModal(item)} className="btn btn-outline btn-full" style={{ padding: '6px 10px', fontSize: '0.8rem' }}>
+                      <button 
+                        onClick={() => openReviewModal(item)} 
+                        className="btn btn-outline btn-full" 
+                        style={{ padding: '6px 10px', fontSize: '0.8rem', cursor: 'pointer' }}
+                      >
                         Review Claims
                       </button>
-                      <button onClick={() => handleDelete(item.id)} className="btn btn-danger" style={{ padding: '6px 10px', fontSize: '0.8rem' }}>
+                      <button 
+                        onClick={() => handleDelete(item.id)} 
+                        className="btn btn-danger" 
+                        style={{ padding: '6px 10px', fontSize: '0.8rem', cursor: 'pointer' }}
+                      >
                         Delete
                       </button>
                     </div>

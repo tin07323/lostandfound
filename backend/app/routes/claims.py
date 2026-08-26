@@ -68,3 +68,40 @@ def approve_claim(
     item.status = "claimed"
     db.commit()
     return {"message": "Claim approved and item marked as claimed."}
+
+@router.put("/{claim_id}/reject")
+def reject_claim(
+    claim_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    claim = db.query(Claim).filter(Claim.id == claim_id).first()
+    if not claim:
+        raise HTTPException(status_code=404, detail="Claim not found.")
+
+    item = db.query(FoundItem).filter(FoundItem.id == claim.item_id).first()
+    if item.posted_by != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to resolve this claim.")
+
+    claim.status = "rejected"
+    db.commit()
+    return {"message": "Claim rejected."}
+
+@router.get("/my-claims")
+def get_my_claims(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    claims = db.query(Claim).filter(Claim.claimed_by == current_user.id).all()
+    result = []
+    for c in claims:
+        item = db.query(FoundItem).filter(FoundItem.id == c.item_id).first()
+        result.append({
+            "id": str(c.id),
+            "item_id": str(c.item_id),
+            "item_name": item.item_name if item else "Unknown Item",
+            "proof_description": c.proof_description,
+            "status": c.status,
+            "created_at": c.created_at
+        })
+    return result
