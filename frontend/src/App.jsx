@@ -6,6 +6,7 @@ import FoundItemsPage from './pages/FoundItemsPage';
 import LostReportsPage from './pages/LostReportsPage';
 import MyClaimsPage from './pages/MyClaimsPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 function Navigation() {
   const { session, userProfile, signOut } = useAuth();
@@ -18,6 +19,7 @@ function Navigation() {
         <Link to="/found" style={{ textDecoration: 'none', color: '#475569', fontWeight: 500 }}>Found Items</Link>
         <Link to="/lost" style={{ textDecoration: 'none', color: '#475569', fontWeight: 500 }}>Lost Reports</Link>
         <Link to="/my-claims" style={{ textDecoration: 'none', color: '#475569', fontWeight: 500 }}>My Claims</Link>
+        <Link to="/notifications" style={{ textDecoration: 'none', color: '#475569', fontWeight: 500 }}>🔔 Alerts</Link>
         {userProfile?.role === 'admin' && (
           <Link to="/admin" style={{ textDecoration: 'none', color: '#4f46e5', fontWeight: 700 }}>⚙️ Admin Panel</Link>
         )}
@@ -39,6 +41,7 @@ function MainRoutes() {
         <Route path="/found" element={session ? <FoundItemsPage /> : <Navigate to="/auth" />} />
         <Route path="/lost" element={session ? <LostReportsPage /> : <Navigate to="/auth" />} />
         <Route path="/my-claims" element={session ? <MyClaimsPage /> : <Navigate to="/auth" />} />
+        <Route path="/notifications" element={session ? <NotificationsPage /> : <Navigate to="/auth" />} />
         <Route path="/admin" element={session ? <AdminDashboardPage /> : <Navigate to="/auth" />} />
         <Route path="*" element={<Navigate to={session ? "/found" : "/auth"} />} />
       </Routes>
