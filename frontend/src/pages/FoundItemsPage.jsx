@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { compressImage } from '../utils/compressImage';
+import SkeletonCard from '../components/SkeletonCard';
 
 export default function FoundItemsPage() {
   const { session, userProfile } = useAuth();
   const [items, setItems] = useState([]);
+  const [itemsLoading, setItemsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
   // Filter States
@@ -36,6 +39,7 @@ export default function FoundItemsPage() {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const fetchItems = async () => {
+    setItemsLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/found-items/`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -46,6 +50,8 @@ export default function FoundItemsPage() {
       }
     } catch (err) {
       console.error('Failed to fetch items:', err);
+    } finally {
+      setItemsLoading(false);
     }
   };
 
@@ -80,10 +86,14 @@ export default function FoundItemsPage() {
     let photoUrl = null;
 
     if (file) {
+      // Compress image client-side before uploading
+      const compressedFile = await compressImage(file);
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      const { error } = await supabase.storage.from('found-items').upload(fileName, file);
+      const { error } = await supabase.storage
+        .from('found-items')
+        .upload(fileName, compressedFile);
 
       if (error) {
         setErrorMsg(`Photo upload failed: ${error.message}`);
@@ -91,7 +101,9 @@ export default function FoundItemsPage() {
         return;
       }
 
-      const { data: publicUrlData } = supabase.storage.from('found-items').getPublicUrl(fileName);
+      const { data: publicUrlData } = supabase.storage
+        .from('found-items')
+        .getPublicUrl(fileName);
       photoUrl = publicUrlData.publicUrl;
     }
 
@@ -314,7 +326,7 @@ export default function FoundItemsPage() {
             </div>
 
             <button type="submit" disabled={loading} className="btn btn-primary" style={{ marginTop: '8px' }}>
-              {loading ? 'Submitting...' : 'Post Found Item'}
+              {loading ? 'Compressing & Uploading...' : 'Post Found Item'}
             </button>
           </form>
         </div>
@@ -378,7 +390,13 @@ export default function FoundItemsPage() {
         </div>
       )}
 
-      {filteredItems.length === 0 ? (
+      {itemsLoading ? (
+        <div className="items-grid">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      ) : filteredItems.length === 0 ? (
         <div className="panel-card" style={{ textAlign: 'center', color: '#64748b', padding: '40px' }}>
           No catalog items matching the selected filters.
         </div>
