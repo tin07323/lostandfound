@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
 
@@ -6,6 +6,11 @@ export default function FoundItemsPage() {
   const { session, userProfile } = useAuth();
   const [items, setItems] = useState([]);
   const [showForm, setShowForm] = useState(false);
+
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedStatus, setSelectedStatus] = useState('All');
 
   // Claiming modal state
   const [claimingItem, setClaimingItem] = useState(null);
@@ -47,6 +52,25 @@ export default function FoundItemsPage() {
   useEffect(() => {
     if (session) fetchItems();
   }, [session]);
+
+  // Derived filtered items
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const matchesSearch =
+        item.item_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.location_found?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory =
+        selectedCategory === 'All' || item.category === selectedCategory;
+
+      const matchesStatus =
+        selectedStatus === 'All' ||
+        item.status?.toLowerCase() === selectedStatus.toLowerCase();
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [items, searchQuery, selectedCategory, selectedStatus]);
 
   const handleUploadAndPost = async (e) => {
     e.preventDefault();
@@ -181,11 +205,57 @@ export default function FoundItemsPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Found Items Catalog</h2>
         <button onClick={() => setShowForm(!showForm)} className="btn btn-primary">
           {showForm ? 'Cancel' : '+ Report Found Item'}
         </button>
+      </div>
+
+      {/* Filter & Search Bar Toolbar */}
+      <div className="panel-card" style={{ marginBottom: '20px', padding: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Search Keywords</label>
+            <input
+              type="text"
+              placeholder="Search title, location..."
+              className="form-control"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Category</label>
+            <select
+              className="form-control"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+              <option value="All">All Categories</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Clothing">Clothing</option>
+              <option value="Keys">Keys</option>
+              <option value="Bags & Wallets">Bags & Wallets</option>
+              <option value="Books & Stationery">Books & Stationery</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Status</label>
+            <select
+              className="form-control"
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+            >
+              <option value="All">All Statuses</option>
+              <option value="unclaimed">Unclaimed</option>
+              <option value="claimed">Claimed</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {showForm && (
@@ -308,13 +378,13 @@ export default function FoundItemsPage() {
         </div>
       )}
 
-      {items.length === 0 ? (
+      {filteredItems.length === 0 ? (
         <div className="panel-card" style={{ textAlign: 'center', color: '#64748b', padding: '40px' }}>
-          No found items reported yet in this school workspace.
+          No catalog items matching the selected filters.
         </div>
       ) : (
         <div className="items-grid">
-          {items.map((item) => (
+          {filteredItems.map((item) => (
             <div key={item.id} className="item-card">
               {item.photo_url ? (
                 <img src={item.photo_url} alt={item.item_name} className="item-card-image" />
